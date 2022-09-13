@@ -80,3 +80,11 @@ def largest_number_of_2(num : int):
         exp += 1
         res *= 2
     return exp
+
+def print_info(cipher:seal.Ciphertext, decryptor:seal.Decryptor, context:seal.SEALContext, encoder:seal.CKKSEncoder, true_result:float):
+    tmp_plain = seal.Plaintext()
+    decryptor.decrypt(cipher, tmp_plain)
+    print(f"\tEnc. result:\t{encoder.decode_double(tmp_plain)[0]}")
+    print(f"\tPlain result:\t{true_result}")
+    print(f"\tScale:\t{cipher.scale}")
+    print(f"\tCh. ind:\t{context.get_context_data(cipher.parms_id()).chain_index()}")
