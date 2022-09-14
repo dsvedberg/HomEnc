@@ -28,7 +28,8 @@ def enc_poly(arg: seal.Ciphertext, coefficients, degrees, power: int, evaluator:
     # Need to know the scale of the argument
     original_scale = arg.scale
 
-    # We need an encryption of 1 to initialize the square and multiply algorithm
+    # We need an encryption of 1 to initialize the square and multiply algorithm, 
+    # which needs to have the correct parameters and scale.
     plain_init = seal.Plaintext()
     encoder.encode(1,original_scale, plain_init)
     for exponent in degrees:
@@ -36,12 +37,14 @@ def enc_poly(arg: seal.Ciphertext, coefficients, degrees, power: int, evaluator:
         # an encryption of 1.
         x_deg = seal.Ciphertext()
         encryptor.encrypt(plain_init, x_deg)
-        # Note that we need to waste one CT-level when using this
-        # copy method. 
-        evaluator.mod_switch_to_next_inplace(x_deg)
 
         # We need to operate on a fresh copy of the encrypted argument
         arg_copy = bad_copy(arg, original_scale, evaluator, encoder)
+
+        # Note that we need to waste at least one CT-level when 
+        # using this copy method. 
+        evaluator.mod_switch_to_inplace(x_deg, arg_copy.parms_id())
+
         square_and_multiply(arg_copy, exponent, evaluator, relin_keys, original_scale, encoder, x_deg)
         arg_degrees.append(x_deg)
 
@@ -89,7 +92,8 @@ def enc_poly(arg: seal.Ciphertext, coefficients, degrees, power: int, evaluator:
 def bad_copy(cipher : seal.Ciphertext,scale : float, evaluator  : seal.Evaluator, encoder : seal.CKKSEncoder):
     dummy_plain = seal.Plaintext()
     encoder.encode(1, scale, dummy_plain)
-
+    if dummy_plain.parms_id() != cipher.parms_id():
+        evaluator.mod_switch_to_inplace(dummy_plain, cipher.parms_id())
     copy = seal.Ciphertext()
     evaluator.multiply_plain(cipher, dummy_plain, copy)
 
@@ -104,9 +108,11 @@ def relinearize_and_rescale_inplace(cipher : seal.Ciphertext, evaluator : seal.E
     # Control scale by rescaling
     evaluator.rescale_to_next_inplace(cipher)
 
-    # evaluator::exponentiate not supported for CKKS, write separate function for exponentiation, note that "res" 
-# should be an encryption of 1 for this to work. 
-def square_and_multiply(cipher : seal.Ciphertext, exp : int,  evaluator : seal.Evaluator, relin_keys : seal.RelinKeys,scale : int, encoder: seal.CKKSEncoder, res : seal.Ciphertext):  
+    # evaluator::exponentiate not supported for CKKS, 
+    # write separate function for exponentiation, note that "res" 
+    # should be an encryption of 1 for this to work. 
+def square_and_multiply(cipher : seal.Ciphertext, exp : int,  evaluator : seal.Evaluator, relin_keys : seal.RelinKeys,scale : int, encoder: seal.CKKSEncoder, res : seal.Ciphertext): 
+
     if exp==0:
         raise ValueError("Exponent cannot be zero --> transparent ciphertext.")
     binary_exp = bin(exp)[2:]
@@ -115,12 +121,10 @@ def square_and_multiply(cipher : seal.Ciphertext, exp : int,  evaluator : seal.E
             if res.data() == None:
                 raise ValueError("Ciphertext res must be initialized to 1.")
             else:
-                #print("Current scale:\t" + str(res.scale))
                 evaluator.multiply_inplace(res, cipher)
                 relinearize_and_rescale_inplace(res, evaluator, relin_keys)
                 evaluator.square_inplace(cipher)
                 relinearize_and_rescale_inplace(cipher, evaluator, relin_keys)
-                #print("Current scale:\t" + str(res.scale))
         else:
             evaluator.square_inplace(cipher)
             relinearize_and_rescale_inplace(cipher,evaluator, relin_keys)
