@@ -85,6 +85,6 @@ def print_info(cipher:seal.Ciphertext, decryptor:seal.Decryptor, context:seal.SE
     tmp_plain = seal.Plaintext()
     decryptor.decrypt(cipher, tmp_plain)
     print(f"\tEnc. result:\t{encoder.decode_double(tmp_plain)[0]}")
-    print(f"\tPlain result:\t{true_result}")
+    print(f"\tPlain result:\t{true_result[0]}")
     print(f"\tScale:\t{cipher.scale}")
     print(f"\tCh. ind:\t{context.get_context_data(cipher.parms_id()).chain_index()}")

@@ -6,7 +6,7 @@ import util
 # an encrypted argument x and a power of 2, pow
 #  this function calculates the (encrypted) value of the polynomial 
 # f(x) = c_0*x^p_0 + ... + c_n*x^p_n
-def enc_poly(arg: seal.Ciphertext, coefficients, degrees, power: int, evaluator: seal.Evaluator, context:seal.SEALContext, encoder:seal.CKKSEncoder, parms:seal.EncryptionParameters, relin_keys:seal.RelinKeys, encryptor:seal.Encryptor):
+def enc_poly(arg: seal.Ciphertext, coefficients, degrees, power: int, evaluator: seal.Evaluator, context:seal.SEALContext, encoder:seal.CKKSEncoder, relin_keys:seal.RelinKeys, encryptor:seal.Encryptor, reset_scale:bool, *original_scale:int):
     # What are the specific primes in the modulus chain? 
     #primes = [modulus.value() for modulus in parms.coeff_modulus()]
 
@@ -82,6 +82,26 @@ def enc_poly(arg: seal.Ciphertext, coefficients, degrees, power: int, evaluator:
     result = seal.Ciphertext()
     evaluator.add_many(arg_degrees, result)
 
+    #-------------------- STEP 5 -----------------------#
+    # Reset scale. This is beneficial to do if you plan on operating further
+    # on result. Note however, that one CT level is wasted in the plain mult. 
+    # so avoid if not necessary. 
+    if reset_scale:
+        if original_scale:
+            # The scaling factor
+            scaling_factor = original_scale/result.scale/2**power
+            
+            # Store in plaintext
+            plain_factor = seal.Plaintext()
+            encoder.encode(scaling_factor, result.scale, plain_factor)
+            evaluator.mod_switch_to_inplace(plain_factor, result.parms_id())
+            
+            evaluator.multiply_plain_inplace(result, plain_factor)
+            evaluator.rescale_to_next_inplace(result)
+            result.scale = original_scale
+        else:
+            raise ValueError("ValueError: original_scale was not provided.")
+
     return result
 
 
@@ -132,7 +152,5 @@ def divByPo2(cipher: seal.Ciphertext, power : int):
 
 # Multiply by PT coefficient by repeated addition. 
 def add_many_coeff(coeff: int, cipher: seal.Ciphertext,evaluator: seal.Evaluator, result: seal.Ciphertext):
-    tmp = []
-    for i in range(coeff):
-        tmp.append(cipher)
+    tmp = [cipher for i in range(coeff)]
     evaluator.add_many(tmp, result)
