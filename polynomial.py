@@ -7,19 +7,16 @@ import util
 #  this function calculates the (encrypted) value of the polynomial 
 # f(x) = c_0*x^p_0 + ... + c_n*x^p_n
 def enc_poly(arg: seal.Ciphertext, coefficients, degrees, power: int, evaluator: seal.Evaluator, context:seal.SEALContext, encoder:seal.CKKSEncoder, parms:seal.EncryptionParameters, relin_keys:seal.RelinKeys, encryptor:seal.Encryptor):
-    
     # What are the specific primes in the modulus chain? 
-    primes = [modulus.value() for modulus in parms.coeff_modulus()]
+    #primes = [modulus.value() for modulus in parms.coeff_modulus()]
 
-    # What is the maximum depth circuit we can evaluate? 
-    # First and last primes are "special" and do not represent
-    # data levels, therefore subtract 2. 
-    max_depth = len(primes)-2
+    # What is the current level of the CT arg?
+    cur_lvl = context.get_context_data(arg.parms_id()).chain_index()
 
     # Assumes degrees is sorted, with highest number at the end.
-    # Check that there are enough available CT-levels. 
-    if ceil(log2(degrees[-1])) > max_depth:
-        raise ValueError(f"ValueError: not enough ciphertext levels for degree {degrees[-1]} polynomial.")
+    # Check that there are enough available CT-levels left. 
+    if ceil(log2(degrees[-1])) > cur_lvl:
+        raise ValueError(f"ValueError: not enough ciphertext levels left for degree {degrees[-1]} polynomial.")
     
     #------------------- Step 1 ----------------------# 
     # Calculate all different degrees and save in arg_degrees
@@ -112,7 +109,6 @@ def relinearize_and_rescale_inplace(cipher : seal.Ciphertext, evaluator : seal.E
     # write separate function for exponentiation, note that "res" 
     # should be an encryption of 1 for this to work. 
 def square_and_multiply(cipher : seal.Ciphertext, exp : int,  evaluator : seal.Evaluator, relin_keys : seal.RelinKeys,scale : int, encoder: seal.CKKSEncoder, res : seal.Ciphertext): 
-
     if exp==0:
         raise ValueError("Exponent cannot be zero --> transparent ciphertext.")
     binary_exp = bin(exp)[2:]
