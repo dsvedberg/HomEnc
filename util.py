@@ -69,6 +69,8 @@ def print_parameters(context):
     
     if(scheme_name=="BFV"):
         print("|\tplain_modulus: " + str(context_data.parms().plain_modulus().value()))
+    
+    print(f"|\tMax Bit Count: {seal.CoeffModulus.MaxBitCount(context_data.parms().poly_modulus_degree(), seal.SEC_LEVEL_TYPE.TC128)}")
 
 def largest_number_of_2(num : int):
     # Start with exponent exp equal to 0

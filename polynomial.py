@@ -1,6 +1,5 @@
 import tenseal.sealapi as seal
-from math import ceil, log2
-import util 
+from math import ceil, log2 
 
 # Given an array of coefficients [c_0, c_1, ..., c_n], an array of degrees [p_0, p_1, ..., p_n],
 # an encrypted argument x and a power of 2, pow
