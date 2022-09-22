@@ -27,11 +27,14 @@ def compare(x: seal.Ciphertext, y: seal.Ciphertext, evaluator: seal.Evaluator, c
     polynomial.divByPo2(f_x, 1)
     return f_x
 
+def compare_plain(x, y):
+    return x > y
 
 # Define L from page 12 in "Efficient Sorting of Homomorphic Encrypted Data..." 
 def L(a,b, F,G):
-    a_larger_than_b = a>b
-    b_larger_than_a = a<b
+    # This will be replaced by approximate, encrypted comparison
+    a_larger_than_b = compare_plain(a,b)
+    b_larger_than_a = compare_plain(b,a)
 
     return a_larger_than_b*F+b_larger_than_a*G
 
@@ -39,15 +42,15 @@ def L(a,b, F,G):
 def max(m, B, C, comparisons):
     if len(B)==0 or len(C)==0:
         if len(B)==0:
-            return C[m]
+            return C[m-1]
         else:
-            return B[m]
+            return B[m-1]
     else:
         i = floor(m/2)
-        j =  ceil(m/3)
-        left = max(j, B[i+1:], C[:j], comparisons[i+1:,:j])
-        right = max(i, B[:i], C[j+1:], comparisons[:i,j+1:])
-        return L(B[i],C[j],left, right)
+        j =  ceil(m/2)
+        left = max(j, B[i:], C[:j-1], [comp[:j-1] for comp in comparisons[i:]])
+        right = max(i, B[:i-1], C[j:], [comp[j:] for comp in comparisons[:i-1]])
+        return L(B[i-1],C[j-1],left, right)
 
 def min(m, B, C, comparisons):
     s = len(B)
@@ -64,7 +67,7 @@ def min(m, B, C, comparisons):
         right = min(i,B[i:],C[:j-1],comparisons[i:,:j-1])
         return L(C[j],B[i],left, right)
 
-# Will start with a fixed-size array of size 4. Arguments in plaintext. 
+# Sorts an array of size k, using pairwise comparisons from in "comparisons"
 def sorter(A, comparisons):
     k = len(A)
     if k == 1:
@@ -82,8 +85,6 @@ def sorter(A, comparisons):
     for i in range(s):
         b_larger_than_C.append(comparisons[i,])
         
-
-
 def merge(B,C,comparisons):
     s = len(B)
     t = len(C)
@@ -98,3 +99,9 @@ def merge(B,C,comparisons):
     z_k = sum(B)+sum(C)-sum(Z)
     Z.insert(k, z_k)
     return Z
+
+if __name__ == "__main__":
+    Avec = [5,3,1,-1,-3]
+    Bvec = [6,4,2,0,-2]
+    comparisons = [[ael > bel for bel in Bvec] for ael in Avec]
+    print(max(3,Avec,Bvec,comparisons))
