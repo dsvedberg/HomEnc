@@ -30,16 +30,10 @@ def compare(x: seal.Ciphertext, y: seal.Ciphertext, evaluator: seal.Evaluator, c
 def compare_plain(x, y):
     return x > y
 
-# Define Lmax from page 12 in "Efficient Sorting of Homomorphic Encrypted Data..." 
-def Lmax(a_larger_than_b, F,G):
+# Define L from page 12 in "Efficient Sorting of Homomorphic Encrypted Data..." 
+def L(a_larger_than_b, F,G):
     # This will be replaced by approximate, encrypted comparison
     return a_larger_than_b*F+(1-a_larger_than_b)*G
-
-# Seems to missing something from sorting article
-# not obvious how to create B<C from B>C for encrypted data.
-# Will use additional function in the meantime
-def Lmin(a_larger_than_b, F, G):
-    return (1-a_larger_than_b)*F+a_larger_than_b*G
 
 # Define m-th Max algorithm for 2 sorted arrays
 def max(m, B, C, comparisons):
@@ -54,43 +48,22 @@ def max(m, B, C, comparisons):
         i = floor(m/2)
         j =  ceil(m/2)
         if i==0:
-            return Lmax(comparisons[i][j-1], B[i],C[j-1])
+            return L(comparisons[i][j-1], B[i],C[j-1])
+        
+        left = max(j, B[i:], C[:j], [comp[:j] for comp in comparisons[i:]])
+        right = max(i, B[:i], C[j:], [comp[j:] for comp in comparisons[:i]])
+        if len(comparisons) < i:
+            return right
+        elif len(comparisons[i-1]) < j:
+            return left
         else:
-            left = max(j, B[i:], C[:j], [comp[:j] for comp in comparisons[i:]])
-            right = max(i, B[:i], C[j:], [comp[j:] for comp in comparisons[:i]])
-            if len(comparisons) < i:
-                return right
-            elif len(comparisons[i-1]) < j:
-                return left
-            else:
-                return Lmax(comparisons[i-1][j-1],left, right)
+            return L(comparisons[i-1][j-1],left, right)
 
 def min(m, B, C, comparisons):
     s = len(B)
     t = len(C)
+    return max(s+t-m+1,B,C,comparisons)
 
-    if s==0 or t==0:
-        if s==0:
-            if len(C)<=t-m:
-                return C[0]
-            else:
-                return C[t-m]
-        else:
-            if len(B)<=s-m:
-                return B[0]
-            else:
-                return B[s-m]
-    else:
-        i = s-floor(m/2)
-        j = t-ceil(m/2)
-        left = min(j, B[:i-1], C[j-1:],[comp[j-1:] for comp in comparisons[:i-1]])
-        right = min(i,B[i-1:],C[:j-1],[comp[:j-1] for comp in comparisons[i-1:]])
-        if len(comparisons) < i:
-            return left
-        elif len(comparisons[i-1]) < j:
-            return right
-        else:
-            return Lmax(comparisons[i-1][j-1],left, right)
 
 # Sorts an array of size k, using pairwise comparisons from in "comparisons"
 def sorter(A, comparisons):
@@ -126,7 +99,11 @@ def merge(B,C,comparisons):
     return Z
 
 if __name__ == "__main__":
-    B = [6,4,2]
-    C = [5,3,1]
+    B = [el for el in range(99, -100, -2)]
+    C = [el for el in range(100, -101, -2)]
     comparisons = [[bel > cel for cel in C] for bel in B]
-    print(min(1,B,C,comparisons)) 
+    m = 3
+    print(f"{m}th smallest element")
+    print(max(len(B)+len(C)-m+1, B,C, comparisons))
+    print(f"{m}th largest element")
+    print(max(m,B,C,comparisons)) 
