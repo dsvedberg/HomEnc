@@ -74,36 +74,35 @@ def sorter(A, comparisons):
     s = floor(k/2)
     t = ceil(k/2)
 
-    B = sorter(A[:s], comparisons[:s,:s])
-    C = sorter(A[s+1:],comparisons[s+1:,s+1:])
-    B_larger_than_a = []
-    b_larger_than_C = []
-    for j in range(s+1, k):
-        B_larger_than_a.append(sorter(comparisons[:s,j], comparisons[:s,:s]))
+    B = sorter(A[:s], [[el for el in comp[:s]] for comp in comparisons[:s]])
+    C = sorter(A[s:], [[el for el in comp[s:]] for comp in comparisons[s:]])
+
+    B_larger_than_C = []
+ 
+    B_larger_than_a = sorter([comp[s:] for comp in comparisons[:s]], [[el for el in comp[:s]] for comp in comparisons[:s]])
     for i in range(s):
-        b_larger_than_C.append(comparisons[i,])
+        B_larger_than_C.append(sorter(B_larger_than_a[i],[[el for el in comp[s:]] for comp in comparisons[s:]]))
+    return merge(B,C,B_larger_than_C)
+
         
 def merge(B,C,comparisons):
     s = len(B)
     t = len(C)
-    k = floor((s+t)/2)
+    k = s+t
     Z = []
     for i in range(k):
-        Z.append(max(i, B, C, comparisons))
-    
-    for j in range(k+2, s+t):
-        Z.append(min(s+t-j,B,C,comparisons))
-    
-    z_k = sum(B)+sum(C)-sum(Z)
-    Z.insert(k, z_k)
+        Z.append(max(i+1, B, C, comparisons))
     return Z
 
 if __name__ == "__main__":
-    B = [el for el in range(99, -100, -2)]
-    C = [el for el in range(100, -101, -2)]
-    comparisons = [[bel > cel for cel in C] for bel in B]
-    m = 3
-    print(f"{m}th smallest element")
-    print(max(len(B)+len(C)-m+1, B,C, comparisons))
-    print(f"{m}th largest element")
-    print(max(m,B,C,comparisons)) 
+#    B = [6,4,2]
+#    C = [5,3,1] 
+    A = [4,6,3,5,1,335,45,0,1245]
+    comparisons = [[bel > cel for cel in A] for bel in A]
+#     m = 3
+#    print(f"{m}th smallest element")
+#    print(max(len(B)+len(C)-m+1, B,C, comparisons))
+#    print(f"{m}th largest element")
+#    print(max(m,B,C,comparisons))  
+    A = sorter(A, comparisons)
+    print(A)
